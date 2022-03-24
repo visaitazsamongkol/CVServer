@@ -1,5 +1,9 @@
+import os
+
+current_dir = os.path.dirname(os.path.realpath(__file__))
+
 def get_api_keys():
-    with open('merriam-webster-key.txt', 'r') as file:
+    with open(os.path.join(current_dir, 'merriam-webster-key.txt'), 'r') as file:
         for line in file:
             key_list = line.split('=')
             if key_list[0].strip() == 'COLLEGIATE_DICT_API_KEY': COLLEGIATE_DICT_API_KEY = key_list[1].strip()
