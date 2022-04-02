@@ -16,4 +16,4 @@
 
 ### Dictionary and Thesaurus Search APIs (route: /search/dictionary and /search/thesaurus)
 - request = fill list of word in JSON body 
-- response = dict whose key is word and value is descriptions of that word (may have more than one description if that word has many parts of speech)
+- response = dict whose key is each word and value is descriptions of that word (may have more than one description if that word has many parts of speech)
