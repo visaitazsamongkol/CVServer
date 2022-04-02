@@ -11,7 +11,7 @@
 # Testing APIs
 
 ### OCR API (route: /ocr)
-- request = fill key: image and value: {uploaded image file} in form-data body
+- request = fill key: image and value: {uploaded .jpg file} in form-data body
 - response = list of word and base64 string type of words-bounding-box image
 
 ### Dictionary and Thesaurus Search APIs (route: /search/dictionary and /search/thesaurus)
