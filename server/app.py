@@ -1,31 +1,22 @@
-from paddleocr import PaddleOCR, draw_ocr
-import flask
 import numpy as np
 import cv2
-from flask import request, send_file
+import flask
+from flask import request, send_file, jsonify, make_response
 from flask_cors import CORS, cross_origin
 from PIL import Image
 import requests
-import sys
 import os
+import base64
+from text_recognition import extract_words_and_result_image
+from dict_search import search_dictionary, search_thesaurus
 
 # server url : https://visaitazsamongkol.herokuapp.com/
-
-def predict():
-    img_path = './tmp.jpeg'
-    ocr = PaddleOCR(use_angle_cls=True, lang='en')
-    result = ocr.ocr(img_path, cls=True)
-    res = []
-    for line in result:
-        res.append(str(line))
-        obj = eval(str(line))
-        word = obj[1][0]
-        confidence = obj[1][1]
-        box = obj[0]
-    return res
+tmp_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tmp.jpg')
 
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
+app.config['JSON_AS_ASCII'] = False
+app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
@@ -34,48 +25,57 @@ app.config['CORS_HEADERS'] = 'Content-Type'
 def home():
     return '''<h1>Computer Vision Server</h1>'''
 
-@app.route('/image', methods=['POST'])
+@app.route('/ocr', methods=['POST'])
 @cross_origin()
-def receiveImageAndPredict():
-    image = request.files['image']
-    if (image.filename == ""):
+def receiveImageAndOCR():
+    file = request.files['image']
+    if (file.filename == ""):
         return '''<h1>No Image Received</h1>''', 500
-    image = image.read()
-    image_numpy = np.fromstring(image, np.uint8)
-    img = cv2.imdecode(image_numpy, cv2.IMREAD_COLOR)
-    cv2.imwrite('./tmp.jpeg', img)
-    # return {'result': predict()}
-    # processing here
-    #
-    return send_file('./tmp.jpeg', mimetype='image/jpeg')
+    byte_arr = file.read()
+    img_numpy = np.frombuffer(byte_arr, np.uint8)
+    imgBGR = cv2.imdecode(img_numpy, cv2.IMREAD_COLOR)
+    # Text Recognition
+    words, bounding_box_img = extract_words_and_result_image(imgBGR)
+    # Convert img to byte_string
+    _, bounding_box_img_numpy = cv2.imencode('.jpg', bounding_box_img)
+    output_base64_str = base64.b64encode(bounding_box_img_numpy).decode()  #numpy array => byte array => base64 string
+
+    return jsonify({'words': list(words.keys()), 'base64_string': output_base64_str})
+
+
+@app.route('/search/dictionary', methods=['POST'])
+@cross_origin()
+def receiveWordListAndSearchDictionary():
+    words = request.get_json()
+    # Dictionary Search
+    dictionary = {}
+    for word in words:
+        dictionary[word] = search_dictionary(word)
+
+    return jsonify(dictionary)
+
+
+@app.route('/search/thesaurus', methods=['POST'])
+@cross_origin()
+def receiveWordListAndSearchThesaurus():
+    words = request.get_json()
+    # Thesaurus Search
+    thesaurus = {}
+    for word in words:
+        thesaurus[word] = search_thesaurus(word)
+
+    return jsonify(thesaurus)
+
 
 @app.route('/image/url', methods=['POST'])
 def receiveImageFromURLAndPredict():
     data = request.get_json()
     image_url = data['image_url']
     image = Image.open(requests.get(image_url, stream=True).raw)
-    image.save('./tmp.jpeg')
-    return {'result': predict()}
+    image.save(tmp_filename)
+    return send_file(tmp_filename, mimetype='image/jpeg')
 
-@app.route('/image/annotate', methods=['POST'])
-def receiveImageAndAnnotate():
-    image = request.files['image']
-    data = request.get_json()
-    boxes = data['boxes']
-    if (image.filename == ""):
-        return '''<h1>No Image Received</h1>''', 500
-    image = image.read()
-    image_numpy = np.fromstring(image, np.uint8)
-    img = cv2.imdecode(image_numpy, cv2.IMREAD_COLOR)
-    cv2.imwrite('./tmp.jpeg', img)
-    # do annotation
-    return send_file('./tmp.jpeg', mimetype='image/jpeg')
-
-@app.route('/load_models', methods=['GET'])
-def load_models():
-    ocr = PaddleOCR(use_angle_cls=True, lang='en')
-    return {'result': 'ok'}, 200
 
 port = int(os.environ.get("PORT", 5000))
 
-app.run(debug=True,host='0.0.0.0',port=port)
+app.run(debug=True, host='0.0.0.0', port=port)

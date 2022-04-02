@@ -1,22 +1,11 @@
-from flask import Flask, jsonify, request
 import requests
 import string
-import os
 import dict_util
 
 COLLEGIATE_DICT_API_KEY, COLLEGIATE_THES_API_KEY = dict_util.get_api_keys()
 
-#init app
-app = Flask(__name__)
-app.config['JSON_AS_ASCII'] = False #instead of using ascii as encoder for json which can support only some characters, we use unicode (utf)
 
-#route
-@app.route('/', methods=['GET'])
-def index():
-    return 'Dictionary search by image application', 200
-
-@app.route('/thesaurus/<string:word>', methods=['GET'])
-def get_thesaurus(word):
+def search_thesaurus(word):
     word = word.lower()
     dictionary = requests.get(f'https://www.dictionaryapi.com/api/v3/references/thesaurus/json/{word}?key={COLLEGIATE_THES_API_KEY}').json()
     # word matched in dictionary (perhaps more than one)
@@ -28,7 +17,7 @@ def get_thesaurus(word):
                 exact_word_found = True
                 word_dicts.append(each_word)
     except TypeError:
-        return f'Cannot find "{word}" in thesaurus', 404
+        return None
 
     if not exact_word_found:
         word_dicts.append(dictionary[0])
@@ -148,11 +137,10 @@ def get_thesaurus(word):
        
         descriptions.append(description)
     
-    return jsonify(descriptions), 200
+    return descriptions
 
 
-@app.route('/dictionary/<string:word>', methods=['GET'])
-def get_dictionary(word):
+def search_dictionary(word):
     word = word.lower()
     dictionary = requests.get(f'https://www.dictionaryapi.com/api/v3/references/collegiate/json/{word}?key={COLLEGIATE_DICT_API_KEY}').json()
     # word matched in dictionary (perhaps more than one)
@@ -164,7 +152,7 @@ def get_dictionary(word):
                 exact_word_found = True
                 word_dicts.append(each_word)
     except TypeError:
-        return f'Cannot find "{word}" in dictionary', 404
+        return None
 
     if not exact_word_found:
         word_dicts.append(dictionary[0])
@@ -196,16 +184,7 @@ def get_dictionary(word):
                 for sense in sense_seq:
                     if sense[0] != 'sense': continue
                     sense = sense[1]
-                    # main_sense = sense[1]
-                    # if sense[0] == 'pseq':
-                    #     bs_found = False
-                    #     for sense_patch in main_sense:
-                    #         if sense_patch[0] == 'bs':
-                    #             bs_found = True
-                    #             break
-                    #     if not bs_found:
-                    #         continue
-
+                    
                     definition = {}
                     definition['verb_divider'] = verb_divider
 
@@ -254,8 +233,4 @@ def get_dictionary(word):
 
         descriptions.append(description)
     
-    return jsonify(descriptions), 200
-
-
-if __name__ == '__main__':
-    app.run(host='localhost', port=5000, debug=True)
+    return descriptions
