@@ -7,11 +7,12 @@ from PIL import Image
 import requests
 import os
 import base64
-from text_recognition import extract_words_and_result_image
+from text_recognition import extract_words_and_result_image, onnx_keras_ocr
 from dict_search import search_dictionary, search_thesaurus
 
 # server url : https://visaitazsamongkol.herokuapp.com/
-tmp_filename = os.path.join(os.path.dirname(os.path.realpath(__file__)), 'tmp.jpg')
+tmp_filename = os.path.join(os.path.dirname(
+    os.path.realpath(__file__)), 'tmp.jpg')
 
 app = flask.Flask(__name__)
 app.config["DEBUG"] = True
@@ -21,9 +22,11 @@ app.config['JSONIFY_PRETTYPRINT_REGULAR'] = True
 cors = CORS(app)
 app.config['CORS_HEADERS'] = 'Content-Type'
 
+
 @app.route('/', methods=['GET'])
 def home():
     return '''<h1>Computer Vision Server</h1>'''
+
 
 @app.route('/ocr', methods=['POST'])
 @cross_origin()
@@ -38,7 +41,8 @@ def receiveImageAndOCR():
     words, bounding_box_img = extract_words_and_result_image(imgBGR)
     # Convert img to byte_string
     _, bounding_box_img_numpy = cv2.imencode('.jpg', bounding_box_img)
-    output_base64_str = base64.b64encode(bounding_box_img_numpy).decode()  #numpy array => byte array => base64 string
+    # numpy array => byte array => base64 string
+    output_base64_str = base64.b64encode(bounding_box_img_numpy).decode()
 
     return jsonify({'words': list(words.keys()), 'base64_string': output_base64_str})
 
@@ -76,6 +80,14 @@ def receiveImageFromURLAndPredict():
     return send_file(tmp_filename, mimetype='image/jpeg')
 
 
-port = int(os.environ.get("PORT", 5000))
+@app.route('/test', methods=['GET'])
+def test():
+    test_img_path = os.path.join(os.path.dirname(
+        os.path.realpath(__file__)), 'test.png')
+    img = Image.open(test_img_path)
+    res = onnx_keras_ocr.run([img])
+    return {"result": [[text, box.tolist()] for text, box in res]}
 
+
+port = int(os.environ.get("PORT", 5000))
 app.run(debug=True, host='0.0.0.0', port=port)

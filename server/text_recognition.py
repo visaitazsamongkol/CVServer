@@ -1,8 +1,12 @@
-import keras_ocr
 import cv2
 import numpy as np
+from keras_ocr_onnx import Onnx_keras_ocr
+import os
+    
+detector_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), './detector/detector.onnx')
+recognizer_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), './recognizer/recognizer.onnx')
 
-pipeline = keras_ocr.pipeline.Pipeline()
+onnx_keras_ocr = Onnx_keras_ocr(detector_path,recognizer_path)
 
 def only_alphabet(text: str):
     output_text = ''
@@ -14,8 +18,8 @@ def only_alphabet(text: str):
 def extract_words_and_result_image(img):
     words = {}
     boxes = []
-    prediction_groups = pipeline.recognize([img])
-    word_box_list = prediction_groups[0]
+    prediction_groups = onnx_keras_ocr.run([img])
+    word_box_list = prediction_groups
     for word, box in word_box_list:
         word = only_alphabet(word)
         if len(word)<=1: continue
