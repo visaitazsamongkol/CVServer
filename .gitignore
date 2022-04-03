@@ -2,3 +2,6 @@ env
 .vs/
 __pycache__
 merriam-webster-key.txt
+
+server/detector
+server/recognizer
