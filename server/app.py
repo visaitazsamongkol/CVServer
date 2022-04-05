@@ -38,13 +38,13 @@ def receiveImageAndOCR():
     img_numpy = np.frombuffer(byte_arr, np.uint8)
     imgBGR = cv2.imdecode(img_numpy, cv2.IMREAD_COLOR)
     # Text Recognition
-    words, bounding_box_img = extract_words_and_result_image(imgBGR)
-    # Convert img to byte_string
+    word_dict, bounding_box_img = extract_words_and_result_image(imgBGR)
+
     _, bounding_box_img_numpy = cv2.imencode('.jpg', bounding_box_img)
     # numpy array => byte array => base64 string
     output_base64_str = base64.b64encode(bounding_box_img_numpy).decode()
 
-    return jsonify({'words': list(words.keys()), 'base64_string': output_base64_str})
+    return jsonify({'words': list(word_dict.keys()), 'base64_string': output_base64_str})
 
 
 @app.route('/search/dictionary', methods=['POST'])
@@ -54,7 +54,7 @@ def receiveWordListAndSearchDictionary():
     # Dictionary Search
     dictionary = {}
     for word in words:
-        dictionary[word] = search_dictionary(word)
+        dictionary[word.capitalize()] = search_dictionary(word)
 
     return jsonify(dictionary)
 
@@ -66,7 +66,7 @@ def receiveWordListAndSearchThesaurus():
     # Thesaurus Search
     thesaurus = {}
     for word in words:
-        thesaurus[word] = search_thesaurus(word)
+        thesaurus[word.capitalize()] = search_thesaurus(word)
 
     return jsonify(thesaurus)
 

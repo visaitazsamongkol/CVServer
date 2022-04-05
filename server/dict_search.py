@@ -1,19 +1,20 @@
 import requests
 import string
-import dict_util
+from dict_util import get_api_keys, manage_braces, del_non_alpha_endings
 
-COLLEGIATE_DICT_API_KEY, COLLEGIATE_THES_API_KEY = dict_util.get_api_keys()
+
+dict_key, thes_key = get_api_keys()
 
 
 def search_thesaurus(word):
     word = word.lower()
-    dictionary = requests.get(f'https://www.dictionaryapi.com/api/v3/references/thesaurus/json/{word}?key={COLLEGIATE_THES_API_KEY}').json()
+    dictionary = requests.get(f'https://www.dictionaryapi.com/api/v3/references/thesaurus/json/{word}?key={thes_key}').json()
     # word matched in dictionary (perhaps more than one)
     word_dicts = []
     exact_word_found = False
     try:
         for each_word in dictionary:
-            if dict_util.del_non_alpha_endings(each_word['meta']['id']) == word:
+            if del_non_alpha_endings(each_word['meta']['id']) == word:
                 exact_word_found = True
                 word_dicts.append(each_word)
     except TypeError:
@@ -38,7 +39,7 @@ def search_thesaurus(word):
         # meanings (all meanings summary) (list)
         description['all_meanings'] = []
         for meaning in word_dict['shortdef']:
-            description['all_meanings'].append(dict_util.manage_braces(meaning))
+            description['all_meanings'].append(manage_braces(meaning))
         # definitions (meaning,example,syn,ant) (list)
         description['definitions'] = []
         for divider in word_dict['def']:
@@ -50,19 +51,23 @@ def search_thesaurus(word):
                     if sense[0] != 'sense': continue
                     sense = sense[1]
                     definition = {}
+
+                    definition['meaning'] = ''
+                    definition['examples'] = []
+                    for dt_element in sense['dt']:
+                        if dt_element[0] == 'text':
+                            definition['meaning'] = manage_braces(dt_element[1])
+                        elif dt_element[0] == 'vis':
+                            for ex in dt_element[1]:
+                                definition['examples'].append(manage_braces(ex['t']))
+
+                    if definition['meaning'] == '': continue
+                    
                     definition['verb_divider'] = verb_divider
 
                     definition['categories'] = []
                     if 'sls' in sense:
                         definition['categories'] = sense['sls']
-                    
-                    definition['examples'] = []
-                    for dt_element in sense['dt']:
-                        if dt_element[0] == 'text':
-                            definition['meaning'] = dict_util.manage_braces(dt_element[1])
-                        elif dt_element[0] == 'vis':
-                            for ex in dt_element[1]:
-                                definition['examples'].append(dict_util.manage_braces(ex['t']))
 
                     definition['synonyms'] = []
                     if 'syn_list' in sense:
@@ -133,7 +138,7 @@ def search_thesaurus(word):
                                         near_antonym += '/' + sub_word['wvbva'] 
                                 definition['antonyms'].append(near_antonym)
                     
-                    if definition['meaning'] != '': description['definitions'].append(definition)
+                    description['definitions'].append(definition)
        
         descriptions.append(description)
     
@@ -142,13 +147,13 @@ def search_thesaurus(word):
 
 def search_dictionary(word):
     word = word.lower()
-    dictionary = requests.get(f'https://www.dictionaryapi.com/api/v3/references/collegiate/json/{word}?key={COLLEGIATE_DICT_API_KEY}').json()
+    dictionary = requests.get(f'https://www.dictionaryapi.com/api/v3/references/collegiate/json/{word}?key={dict_key}').json()
     # word matched in dictionary (perhaps more than one)
     word_dicts = []
     exact_word_found = False
     try:
         for each_word in dictionary:
-            if dict_util.del_non_alpha_endings(each_word['meta']['id']) == word:
+            if del_non_alpha_endings(each_word['meta']['id']) == word:
                 exact_word_found = True
                 word_dicts.append(each_word)
     except TypeError:
@@ -173,7 +178,7 @@ def search_dictionary(word):
         # meanings (all meanings summary) (list)
         description['all_meanings'] = []
         for meaning in word_dict['shortdef']:
-            description['all_meanings'].append(dict_util.manage_braces(meaning))
+            description['all_meanings'].append(manage_braces(meaning))
         # definitions (meaning,example,syn,ant) (list)
         description['definitions'] = []
         for divider in word_dict['def']:
@@ -186,31 +191,35 @@ def search_dictionary(word):
                     sense = sense[1]
                     
                     definition = {}
+
+                    definition['meaning'] = ''
+                    definition['examples'] = []
+                    for dt_element in sense['dt']:
+                        if dt_element[0] == 'text':
+                            definition['meaning'] = manage_braces(dt_element[1])
+                        elif dt_element[0] == 'vis':
+                            for ex in dt_element[1]:
+                                definition['examples'].append(manage_braces(ex['t']))
+
+                    if definition['meaning'] == '': continue
+                    
                     definition['verb_divider'] = verb_divider
 
                     definition['categories'] = []
                     if 'sls' in sense:
                         definition['categories'] = sense['sls']
                     
-                    definition['examples'] = []
-                    for dt_element in sense['dt']:
-                        if dt_element[0] == 'text':
-                            definition['meaning'] = dict_util.manage_braces(dt_element[1])
-                        elif dt_element[0] == 'vis':
-                            for ex in dt_element[1]:
-                                definition['examples'].append(dict_util.manage_braces(ex['t']))
-                    
                     definition['closely_related_meaning'] = ''
                     definition['closely_related_examples'] = []
                     if 'sdsense' in sense:
                         for dt_element in sense['sdsense']['dt']:
                             if dt_element[0] == 'text':
-                                definition['closely_related_meaning'] = dict_util.manage_braces(dt_element[1])
+                                definition['closely_related_meaning'] = manage_braces(dt_element[1])
                             elif dt_element[0] == 'vis':
                                 for ex in dt_element[1]:
-                                    definition['closely_related_examples'].append(dict_util.manage_braces(ex['t']))
+                                    definition['closely_related_examples'].append(manage_braces(ex['t']))
 
-                    if definition['meaning'] != '': description['definitions'].append(definition)
+                    description['definitions'].append(definition)
 
         # syllable division
         description['syllable'] = word_dict['hwi']['hw']
