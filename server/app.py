@@ -76,8 +76,9 @@ def receiveImageFromURLAndPredict():
     data = request.get_json()
     image_url = data['image_url']
     image = Image.open(requests.get(image_url, stream=True).raw)
-    image.save(tmp_filename)
-    return send_file(tmp_filename, mimetype='image/jpeg')
+    res = onnx_keras_ocr.run([image])
+    return  {"result": [[text, box.tolist()] for text, box in res]}
+
 
 
 @app.route('/test', methods=['GET'])
